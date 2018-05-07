@@ -1,0 +1,29 @@
+{
+  "name": "conllu-dao",
+  "version": "1.0.0",
+  "description": "Easy Data Access and Object Mapping package written in typescript",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aosaimy/conllu-dao.git"
+  },
+  "keywords": [
+    "conllu",
+    "parser",
+    "universal",
+    "dependecies"
+  ],
+  "author": "Abdulrahman Alosaimy <a.osaimy@gmail.com> (al-osaimy.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/aosaimy/conllu-dao/issues"
+  },
+  "homepage": "https://github.com/aosaimy/conllu-dao#readme",
+  "devDependencies": {
+    "typescript": "^2.8.3"
+  }
+}
