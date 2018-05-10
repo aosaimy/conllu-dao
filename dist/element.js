@@ -55,14 +55,14 @@ class ConlluElement {
             this._xpostag = "_";
             return;
         }
-        // this._xpostag = this.sentence.document.mapTagToXpostag(argv)
-        // this.upostag = this.sentence.document.mapTagToUpostag(this._xpostag,this.upostag)
+        this._xpostag = this.sentence.document.mapTagToXpostag(argv);
+        this.upostag = this.sentence.document.mapTagToUpostag(this._xpostag, this.upostag);
         // remove feats
         var tag = this.sentence.document.config.alltags.find(x => x.tag == this._xpostag);
         if (!tag)
             return;
         else if (Array.isArray(tag.features)) {
-            // this.features = this.features.filter(x=>tag.features.indexOf(x.key)>=0)
+            this.features = this.features.filter(x => tag.features.indexOf(x.key) >= 0);
             // this.features = tag.features.map(x=>this.features.find(y=>y.key==x)||x).map(x=>typeof x =="string" ?{key:x,value:"_"}:x)
             // console.log(this.features)
         }
