@@ -220,7 +220,7 @@ export class ConlluDocument {
                 Util.repairFields(fields, this.logger);
             }
 
-            var element = new ConlluElement(fields, idx, line, currentSentence);
+            var element = new ConlluElement(fields, ""+idx, line, currentSentence);
 
             let issues = element.validate();
             issues.forEach(v=>logLineError(v))

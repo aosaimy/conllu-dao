@@ -11,10 +11,11 @@ export class Util {
             logger('repair: discarding fields > 10');
             fields = fields.slice(0, 10);
         } else {
-            logger('repair: filling in empty ("_") for missing fields');
-            for (let m = 0; m < 10 - fields.length; m++) {
+            for (let m = 0; fields.length < 10; m++) {
                 fields.push('_');
             }
+            logger('repair: filling in empty ("_") for missing fields. Fields now are '+fields.length)
+
         }
     };
 

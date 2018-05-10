@@ -107,7 +107,7 @@ export class ConlluElement {
     analysis: ConlluElement[] = [] ;
 
     // represents CoNLL-U word or multiword token
-    constructor(fields, lineidx, line,sentence) {
+    constructor(fields : string[], lineidx : string, line : string,sentence : ConlluSentence) {
         this.sentence = sentence;
         this.id = fields[0];
         this.form = fields[1];

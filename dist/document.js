@@ -200,7 +200,7 @@ class ConlluDocument {
                 logLineError('expected 10 fields, got ' + fields.length);
                 util_1.Util.repairFields(fields, this.logger);
             }
-            var element = new element_1.ConlluElement(fields, idx, line, currentSentence);
+            var element = new element_1.ConlluElement(fields, "" + idx, line, currentSentence);
             let issues = element.validate();
             issues.forEach(v => logLineError(v));
             if (issues.length !== 0) {

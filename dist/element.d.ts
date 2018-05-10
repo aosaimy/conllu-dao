@@ -25,7 +25,7 @@ export declare class ConlluElement {
     feats: string;
     sentence: ConlluSentence;
     analysis: ConlluElement[];
-    constructor(fields: any, lineidx: any, line: any, sentence: any);
+    constructor(fields: string[], lineidx: string, line: string, sentence: ConlluSentence);
     setFeature(key: any, value: any): void;
     copy(from: any): void;
     getContext(span?: number): ConlluElement[];
