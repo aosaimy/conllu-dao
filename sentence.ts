@@ -1,211 +1,213 @@
-import {ConlluElement} from "./element"
-import {Util} from "./util"
-import {ConlluDocument} from "./document"
+import {ConlluElement} from './element';
+import {Util} from './util';
+import {ConlluDocument} from './document';
 
 export class ConlluSentence {
 
     /*
      * ConllU.ConlluSentence: represents CoNLL-U sentence
      */
-     _id : number =0
+     _id = 0;
     get id(){
-      return "S"+this._id
+      return 'S' + this._id;
     }
-    set id(str:string|number){
-      if(typeof str  == "string")
-          this._id = parseInt(str.replace(/[^0-9]/g,""))
-      else
-          this._id = str
+    set id(str: string|number){
+      if (typeof str  === 'string') {
+          this._id = parseInt(str.replace(/[^0-9]/g, ''), 10);
+      }
+      else {
+          this._id = str;
+      }
     }
-    document: ConlluDocument
-    elements: ConlluElement[] = []
-    comments: any[] = []
-    baseOffset: number = 0
-    private issues: string[] = []
-    tag: string = ""
-    error: boolean = false
+    document: ConlluDocument;
+    elements: ConlluElement[] = [];
+    comments: any[] = [];
+    baseOffset = 0;
+    private issues: string[] = [];
+    tag = '';
+    error = false;
 
     constructor(sentenceId, elements: ConlluElement[] = [], comments = [], document) {
         this.id = sentenceId;
-        this.document = document
+        this.document = document;
 
         this.comments = comments;
         this.baseOffset = 0;
-        this.elements = elements
-        this.elements.forEach(e=>{
-            e.sentence = this
-        })
+        this.elements = elements;
+        this.elements.forEach(e => {
+            e.sentence = this;
+        });
 
         // this.refix()
-    };
+    }
 
-    refix(keepParentRelations=false){
+    refix(keepParentRelations= false){
       // Fix the id, isSeg, parent, children according to the ID values.
       // Needed after editing elements of one sentence.
       // param: keepParentRelations: when true will respect parent relation. Only Id, children and isSeg is updated.
-        var from: number=-1, to: number=-2;
-        var parent: ConlluElement;
+        let from = -1;
+        let to = -2;
+        let parent: ConlluElement;
 
-        var counter = 1;
+        let counter = 1;
         this.elements.forEach(e => {
           if (e.isMultiword) {
-              if(!keepParentRelations){
+              if (!keepParentRelations){
                 // isSeg is updated later
-                from = parseInt(e.id.split("-")[0])
-                to = parseInt(e.id.split("-")[1])
-                e.isSeg = -(to - from) - 1
-                parent = e
+                from = parseInt(e.id.split('-')[0], 10);
+                to = parseInt(e.id.split('-')[1], 10);
+                e.isSeg = -(to - from) - 1;
+                parent = e;
               }
-              e.parent = null
-              e.children.length = 0
+              e.parent = null;
+              e.children.length = 0;
           }
           else{
-              e.id = "" + counter++;
+              e.id = '' + counter++;
               if (!keepParentRelations){
-               if(parseInt(e.id) >= from && parseInt(e.id) <= to) {
-                  e.isSeg = parseInt(e.id) - from
-                  e.parent = parent
-                  if(!e.parent){
-                    console.error(e.sentence.elements.map(e=>e.toConllU(true,false)))
+               if (parseInt(e.id, 10) >= from && parseInt(e.id, 10) <= to) {
+                  e.isSeg = parseInt(e.id, 10) - from;
+                  e.parent = parent;
+                  if (!e.parent){
+                    console.error(e.sentence.elements.map(ee => ee.toConllU(true, false)));
                 }
                   else{
-                      e.parent.children.push(e)
-                      e.parent.id = e.parent.children[0].id + "-" + (parseInt(e.parent.children[0].id) + e.parent.children.length-1)
+                      e.parent.children.push(e);
+                      e.parent.id = e.parent.children[0].id + '-' + (parseInt(e.parent.children[0].id, 10) + e.parent.children.length - 1);
                   }
                 }
               }
               else if (e.parent){
-                e.parent.children.push(e)
+                e.parent.children.push(e);
 
-                e.isSeg = parseInt(e.id) - parseInt(e.parent.children[0].id)
-                e.parent.isSeg = -(parseInt(e.parent.children[e.parent.children.length-1].id) - parseInt(e.parent.children[0].id)) - 1
+                e.isSeg = parseInt(e.id, 10) - parseInt(e.parent.children[0].id, 10);
+                e.parent.isSeg = - ( parseInt(e.parent.children[e.parent.children.length - 1].id, 10) -
+                                 parseInt(e.parent.children[0].id, 10)) - 1;
 
-                //TODO
+                // TODO
                 // if(-e.parent.isSeg != e.parent.children.length)
                   // console.error("Not the same",-e.parent.isSeg, e.parent.children.length, e.parent.toConllU())
 
-                e.parent.id = e.parent.children[0].id + "-" + (parseInt(e.parent.children[0].id) + e.parent.children.length-1)
+                e.parent.id = e.parent.children[0].id + '-' + (parseInt(e.parent.children[0].id, 10) + e.parent.children.length - 1);
               }
               else{
                   // console.error("Should never be here",e)
               }
           }
           // return e
-        })//.filter(e=>e!=null);
-        return this
+        }); // .filter(e=>e!=null);
+        return this;
     }
     getText(){
-        return this.tokens().map(e => e.form).join(" ");
+        return this.tokens().map(e => e.form).join(' ');
     }
 
-    toConllU (lines: string[]=[]) {
-        for (let com of this.comments) {
-            lines.push(com)
+    toConllU(lines: string[]= []) {
+        for (const com of this.comments) {
+            lines.push(com);
         }
-        for (let elem of this.tokens()) {
-            lines.push(elem.toConllU())
+        for (const elem of this.tokens()) {
+            lines.push(elem.toConllU());
         }
-        return lines
+        return lines;
     }
 
     // set offset of first character in sentence (for standoff
     // generation)
-    setBaseOffset (baseOffset) {
+    setBaseOffset(baseOffset) {
         this.baseOffset = baseOffset;
     }
 
-    dependencies () {
-        var dependencies : string[][] = [];
+    dependencies() {
+        let dependencies: string[][] = [];
 
-        for (let i = 0; i < this.elements.length; i++) {
-            var element : ConlluElement = this.elements[i];
+        for (const element of this.elements) {
             dependencies = dependencies.concat(element.dependencies());
         }
 
         return dependencies;
-    };
+    }
 
-    words(includeEmpty: boolean) : ConlluElement[] {
-        return this.elements.filter(function(e) {
+    words(includeEmpty: boolean): ConlluElement[] {
+        return this.elements.filter((e) => {
             return (e.isWord() || (includeEmpty && e.isEmptyNode()));
         });
-    };
+    }
 
-    multiwords () {
-        return this.elements.filter(e=>e.isMultiword)
-    };
+    multiwords() {
+        return this.elements.filter(e => e.isMultiword);
+    }
 
     tokens(): ConlluElement[] {
         // extract token sequence by omitting word IDs that are
         // included in a multiword token range.
-        var multiwords = this.multiwords();
-        var inRange = {};
-        for (let i = 0; i < multiwords.length; i++) {
-            var mw = multiwords[i];
+        const multiwords = this.multiwords();
+        const inRange = {};
+        for (const mw of multiwords) {
             for (let j = mw.rangeFrom(); j <= mw.rangeTo(); j++) {
                 inRange[j] = true;
             }
         }
-        return this.elements.filter(function(e) {
+        return this.elements.filter((e) => {
             return e.isToken(inRange);
         });
-    };
+    }
 
     // return words with possible modifications for visualization with
     // brat
-    bratWords (includeEmpty) {
-        var words = this.words(includeEmpty);
+    bratWords(includeEmpty) {
+        const words = this.words(includeEmpty);
 
-        for (let i = 0; i < words.length; i++) {
-            if (Util.isRtl(words[i].form)) {
-                words[i] = Util.deepCopy(words[i]);
+        words.forEach((word, i) => {
+            if (Util.isRtl(word.form)) {
+                words[i] = Util.deepCopy(word);
                 words[i].form = Util.rtlFix(words[i].form);
             }
-        }
+        });
 
         return words;
-    };
+    }
 
     // return tokens with possible modifications for visualization
     // with brat
-    bratTokens () {
-        var tokens = this.tokens();
+    bratTokens() {
+        const tokens = this.tokens();
 
-        for (let i = 0; i < tokens.length; i++) {
-            tokens[i] = Util.deepCopy(tokens[i]);
+        tokens.forEach((token, i) => {
+            tokens[i] = Util.deepCopy(token);
             tokens[i].form = Util.rtlFix(tokens[i].form);
-        }
+        });
 
         return tokens;
-    };
+    }
 
     // return the text of the sentence for visualization with brat
-    bratText (includeEmpty) {
-        var words = this.bratWords(includeEmpty);
-        var tokens = this.bratTokens();
+    bratText(includeEmpty) {
+        const words = this.bratWords(includeEmpty);
+        const tokens = this.bratTokens();
 
-        var wordText = words.map(function(w) { return w.form }).join(' ');
-        var tokenText = tokens.map(function(w) { return w.form }).join(' ');
+        const wordText = words.map((w) => w.form).join(' ');
+        const tokenText = tokens.map((w) => w.form).join(' ');
 
-        var combinedText = wordText;
-        if (wordText != tokenText) {
+        let combinedText = wordText;
+        if (wordText !== tokenText) {
             combinedText += '\n' + tokenText;
         }
 
         return combinedText;
-    };
+    }
 
     // return the annotated text spans of the sentence for visualization
     // with brat.
-    bratSpans (includeEmpty) {
-        var spans : any[][] = [],
-            offset = this.baseOffset;
+    bratSpans(includeEmpty) {
+        const spans: any[][] = [];
+        let offset = this.baseOffset;
 
         // create an annotation for each word
-        var words = this.bratWords(includeEmpty);
-        for (let i = 0; i < words.length; i++) {
-            var length = words[i].form.length;
-            spans.push([this.id + '-T' + words[i].id, words[i].upostag,
+        const words = this.bratWords(includeEmpty);
+        for (const word of words) {
+            const length = word.form.length;
+            spans.push([this.id + '-T' + word.id, word.upostag,
             [[offset, offset + length]]]);
             offset += length + 1;
         }
@@ -215,53 +217,50 @@ export class ConlluSentence {
 
     // return attributes of sentence annotations for visualization
     // with brat.
-    bratAttributes (includeEmpty) {
-        var words = this.words(includeEmpty);
+    bratAttributes(includeEmpty) {
+        const words = this.words(includeEmpty);
 
         // create attributes for word features
-        var attributes :any[] = [],
-            aidseq = 1;
-        for (let i = 0; i < words.length; i++) {
-            var word = words[i],
-                tid = this.id + '-T' + word.id;
-            var nameVals = word.features;
-            for (let j = 0; j < nameVals.length; j++) {
-                var name = nameVals[j].key,
-                    value = nameVals[j].value;
+        const attributes: any[] = [];
+        let aidseq = 1;
+        for (const word of words) {
+            const tid = this.id + '-T' + word.id;
+            const nameVals = word.features;
+            for (const nameVal of nameVals) {
+                const name = nameVal.key;
+                const value = nameVal.value;
                 attributes.push([this.id + '-A' + aidseq++, name, tid, value]);
             }
         }
 
         return attributes;
-    };
+    }
 
     // return relations for sentence dependencies for visualization
     // with brat.
-    bratRelations (includeEmpty) {
-        var dependencies = this.dependencies();
-        var relations : any[] = [];
+    bratRelations(includeEmpty) {
+        const dependencies = this.dependencies();
+        const relations: any[] = [];
 
-        for (let i = 0; i < dependencies.length; i++) {
-            var dep = dependencies[i];
+        dependencies.forEach((dep, i) => {
             relations.push([this.id + '-R' + i, dep[2],
             [['arg1', this.id + '-T' + dep[1]],
             ['arg2', this.id + '-T' + dep[0]]]]);
-        }
+        });
 
         return relations;
-    };
+    }
 
     // return comments (notes) on sentence annotations for
     // visualization with brat.
-    bratComments (includeEmpty) {
-        var words = this.words(includeEmpty);
+    bratComments(includeEmpty) {
+        const words = this.words(includeEmpty);
 
         // TODO: better visualization for LEMMA, XPOSTAG, and MISC.
-        var comments : any[] = [];
-        for (let i = 0; i < words.length; i++) {
-            var word = words[i],
-                tid = this.id + '-T' + word.id,
-                label = 'AnnotatorNotes';
+        const comments: any[] = [];
+        for (const word of words) {
+            const tid = this.id + '-T' + word.id;
+            const label = 'AnnotatorNotes';
             comments.push([tid, label, 'Lemma: ' + word.lemma]);
             if (word.xpostag !== '_') {
                 comments.push([tid, label, 'Xpostag: ' + word.xpostag]);
@@ -272,23 +271,21 @@ export class ConlluSentence {
         }
 
         return comments;
-    };
+    }
 
     // Return styles on sentence annotations for visualization with
     // brat. Note: this feature is an extension of both the CoNLL-U
     // comment format and the basic brat data format.
-    bratStyles (includeEmpty) {
-        var styles :any[][]= [],
-            wildcards :string[][] = [];
+    bratStyles(includeEmpty) {
+        const styles: any[][] = [];
+        const wildcards: string[][] = [];
 
-        for (let i = 0; i < this.comments.length; i++) {
-            var comment = this.comments[i];
-
-            var m = comment.match(/^(\#\s*visual-style\s+)(.*)/);
+        for (const comment of this.comments) {
+            let m = comment.match(/^(\#\s*visual-style\s+)(.*)/);
             if (!m) {
                 continue;
             }
-            var styleSpec = m[2];
+            const styleSpec = m[2];
 
             // Attempt to parse as a visual style specification. The
             // expected format is "REF<SPACE>STYLE", where REF
@@ -302,11 +299,13 @@ export class ConlluSentence {
                 console.warn('warning: failed to parse: "' + comment + '"');
                 continue;
             }
-            var reference = m[1], style = m[2];
+            let reference = m[1];
+            const style = m[2];
 
             // split style into key and value, adding a key to
             // color-only styles as needed for the reference type.
-            var key, value;
+            let key;
+            let value;
             m = style.match(/^(\S+):(\S+)$/);
             if (m) {
                 key = m[1];
@@ -341,32 +340,32 @@ export class ConlluSentence {
         // for expanding wildcards, first determine which words / arcs
         // styles have already been set, and then add the style to
         // everything that hasn't.
-        var setStyle: any = {};
-        for (let i = 0; i < styles.length; i++) {
-            setStyle[styles[i][0] + styles[i][1]] = true;
+        const setStyle: any = {};
+        for (const  style of styles) {
+            setStyle[style[0] + style[1]] = true;
         }
-        for (let i = 0; i < wildcards.length; i++) {
-            let reference = wildcards[i][0],
-                key = wildcards[i][1],
-                value = wildcards[i][2];
+        for (const  wildcard of wildcards) {
+            const reference = wildcard[0];
+            const key = wildcard[1];
+            const value = wildcard[2];
             if (reference === 'nodes') {
-                var words = this.words(includeEmpty);
-                for (let j = 0; j < words.length; j++) {
-                    var r = this.id + '-T' + words[j].id;
+                const words = this.words(includeEmpty);
+                for (const  word of words) {
+                    const r = this.id + '-T' + word.id;
                     if (!setStyle[r.concat(key)]) {
                         styles.push([r, key, value]);
                         setStyle[r.concat(key)] = true;
                     }
                 }
             } else if (reference === 'arcs') {
-                var deps = this.dependencies();
-                for (let j = 0; j < deps.length; j++) {
-                    var rr = [this.id + '-T' + deps[j][1],
-                    this.id + '-T' + deps[j][0],
-                    deps[j][2]];
-                    if (!setStyle[rr.concat([key]).join("")]) {
+                const deps = this.dependencies();
+                for (const  dep of deps) {
+                    const rr = [this.id + '-T' + dep[1],
+                    this.id + '-T' + dep[0],
+                    dep[2]];
+                    if (!setStyle[rr.concat([key]).join('')]) {
                         styles.push([rr, key, value]);
-                        setStyle[rr.concat([key]).join("")] = true;
+                        setStyle[rr.concat([key]).join('')] = true;
                     }
                 }
             } else {
@@ -375,67 +374,66 @@ export class ConlluSentence {
         }
 
         return styles;
-    };
+    }
 
     // Return label of sentence for visualization with brat, or null
     // if not defined. Note: this feature is an extension of both the
     // CoNLL-U comment format and the basic brat data format.
-    bratLabel () {
-        var label = null;
+    bratLabel() {
+        let label = null;
 
-        for (let i = 0; i < this.comments.length; i++) {
-            var comment = this.comments[i];
+        for (const comment of this.comments) {
 
-            var m = comment.match(/^(\#\s*sentence-label\b)(.*)/);
+            const m = comment.match(/^(\#\s*sentence-label\b)(.*)/);
             if (!m) {
                 continue;
             }
             label = m[2].trim();
         }
         return label;
-    };
+    }
 
     // Return representation of sentence in brat embedded format (see
     // http://brat.nlplab.org/embed.html).
     // If includeEmpty is truthy, include empty nodes in the representation.
     // Note: "styles" is an extension, not part of the basic format.
-    toBrat (includeEmpty) {
-        var text = this.bratText(includeEmpty);
-        var spans = this.bratSpans(includeEmpty);
-        var attributes = this.bratAttributes(includeEmpty);
-        var relations = this.bratRelations(includeEmpty);
-        var comments = this.bratComments(includeEmpty);
-        var styles = this.bratStyles(includeEmpty);
-        var labels = [this.bratLabel()];
+    toBrat(includeEmpty) {
+        const text = this.bratText(includeEmpty);
+        const spans = this.bratSpans(includeEmpty);
+        const attributes = this.bratAttributes(includeEmpty);
+        const relations = this.bratRelations(includeEmpty);
+        const comments = this.bratComments(includeEmpty);
+        const styles = this.bratStyles(includeEmpty);
+        const labels = [this.bratLabel()];
 
         return {
-            'text': text,
-            'entities': spans,
-            'attributes': attributes,
-            'relations': relations,
-            'comments': comments,
-            'styles': styles,
-            'sentlabels': labels,
+            text,
+            entities: spans,
+            attributes,
+            relations,
+            comments,
+            styles,
+            sentlabels: labels,
         };
-    };
+    }
 
-    elementById () {
-        var elementById = {};
+    elementById() {
+        const elementById = {};
 
-        for (let i = 0; i < this.elements.length; i++) {
-            elementById[this.elements[i].id] = this.elements[i];
+        for (const element of this.elements) {
+            elementById[element.id] = element;
         }
 
         return elementById;
-    };
+    }
 
-    addError (issue, element) {
+    addError(issue, element) {
         this.issues.push('line ' + (element.lineidx + 1) + ': ' + issue + ' ("' + element.line + '")');
     }
 
     // Check validity of the sentence. Return list of strings
     // representing issues found in validation (empty list if none).
-    validate () {
+    validate() {
         this.issues = [];
 
         this.validateUniqueIds();
@@ -446,33 +444,35 @@ export class ConlluSentence {
         this.validateParentAndChildren();
 
         return this.issues;
-    };
+    }
 
     validateParentAndChildren(){
-        var initialIssueCount = this.issues.length;
-        for(let e of this.elements){
-            if(e.isMultiword && e.id.split("-").length != 2)
+        const initialIssueCount = this.issues.length;
+        for (const e of this.elements){
+            if (e.isMultiword && e.id.split('-').length !== 2) {
                 this.addError('isMultiword but id is not a range."' + e.id + '"',
                     e);
-            if(!e.isMultiword && e.id.split("-").length != 1)
+            }
+            if (!e.isMultiword && e.id.split('-').length !== 1) {
                 this.addError('is not a Multiword but id is not a single integer."' + e.id + '"',
                     e);
-            if(e.isMultiword && e.children.length == 0)
+            }
+            if (e.isMultiword && e.children.length === 0) {
                 this.addError('isMultiword but zero children."' + e.id + '"',
                     e);
-            if(e.isMultiword && e.children.filter(ee=>ee.parent != e).length >0)
+            }
+            if (e.isMultiword && e.children.filter(ee => ee.parent !== e).length > 0) {
                 this.addError('isMultiword and children are not pointing to parent."' + e.id + '"',
                     e);
+            }
         }
     }
     // Check for presence of ID duplicates
-    validateUniqueIds () {
+    validateUniqueIds() {
+        const initialIssueCount = this.issues.length;
+        const elementById = {};
 
-        var initialIssueCount = this.issues.length;
-        var elementById = {};
-
-        for (let i = 0; i < this.elements.length; i++) {
-            var element = this.elements[i];
+        for (const element of this.elements) {
             if (elementById[element.id] !== undefined) {
                 this.addError('non-unique ID "' + element.id + '"',
                     element);
@@ -481,16 +481,15 @@ export class ConlluSentence {
         }
 
         return this.issues.length === initialIssueCount;
-    };
+    }
 
     // Check validity of word ID sequence (should be 1,2,3,...)
-    validateWordSequence () {
+    validateWordSequence() {
 
-        var initialIssueCount = this.issues.length;
-        var expectedId = 1;
+        const initialIssueCount = this.issues.length;
+        let expectedId = 1;
 
-        for (let i = 0; i < this.elements.length; i++) {
-            var element = this.elements[i];
+        for (const element of this.elements) {
 
             if (element.isMultiword || element.isEmptyNode()) {
                 continue; // only check simple word sequence here
@@ -505,16 +504,15 @@ export class ConlluSentence {
         }
 
         return this.issues.length === initialIssueCount;
-    };
+    }
 
     // Check that multiword token ranges are valid
-    validateMultiwordSequence () {
+    validateMultiwordSequence() {
 
-        var initialIssueCount = this.issues.length;
-        var expectedId = 1;
+        const initialIssueCount = this.issues.length;
+        let expectedId = 1;
 
-        for (let i = 0; i < this.elements.length; i++) {
-            var element = this.elements[i];
+        for (const element of this.elements) {
 
             if (element.isMultiword && element.rangeFrom() !== expectedId) {
                 this.addError('multiword tokens must appear before ' +
@@ -526,22 +524,21 @@ export class ConlluSentence {
         }
 
         return this.issues.length === initialIssueCount;
-    };
+    }
 
-    validateEmptyNodeSequence () {
+    validateEmptyNodeSequence() {
 
-        var initialIssueCount = this.issues.length;
-        var previousWordId = '0';    // TODO check https://github.com/UniversalDependencies/docs/this.issues/382
-        var nextEmptyNodeId = 1;
+        const initialIssueCount = this.issues.length;
+        let previousWordId = '0';    // TODO check https://github.com/UniversalDependencies/docs/this.issues/382
+        let nextEmptyNodeId = 1;
 
-        for (let i = 0; i < this.elements.length; i++) {
-            var element = this.elements[i];
+        for (const element of this.elements) {
 
             if (element.isWord()) {
                 previousWordId = element.id;
                 nextEmptyNodeId = 1;
             } else if (element.isEmptyNode()) {
-                var expectedId = previousWordId + '.' + nextEmptyNodeId;
+                const expectedId = previousWordId + '.' + nextEmptyNodeId;
                 if (element.id !== expectedId) {
                     this.addError('empty node IDs should be *.1, *.2, ... ' +
                         'expected ' + expectedId + ', got ' + element.id,
@@ -555,13 +552,12 @@ export class ConlluSentence {
     }
 
     // Check validity of ID references in HEAD and DEPS.
-    validateReferences () {
+    validateReferences() {
 
-        var initialIssueCount = this.issues.length;
-        var elementById = this.elementById();
+        const initialIssueCount = this.issues.length;
+        const elementById = this.elementById();
 
-        for (let i = 0; i < this.elements.length; i++) {
-            var element = this.elements[i];
+        for (const element of this.elements) {
 
             // validate HEAD
             if (!element.validHeadReference(elementById)) {
@@ -570,9 +566,9 @@ export class ConlluSentence {
             }
 
             // validate DEPS
-            var elemDeps = element.dependencies(true);
-            for (let j = 0; j < elemDeps.length; j++) {
-                var head = elemDeps[j][1];
+            const elemDeps = element.dependencies(true);
+            for (const elemDep of elemDeps) {
+                const head = elemDep[1];
                 if (head !== '0' && elementById[head] === undefined) {
                     this.addError('invalid ID "' + head + '" in DEPS',
                         element);
@@ -581,9 +577,9 @@ export class ConlluSentence {
         }
 
         return this.issues.length === initialIssueCount;
-    };
+    }
 
-    repair (log) {
+    repair(log) {
         log = (log !== undefined ? log : Util.nullLogger);
 
         if (!this.validateUniqueIds()) {
@@ -606,18 +602,17 @@ export class ConlluSentence {
             this.repairReferences(log);
         }
 
-        var issues = this.validate();
+        const issues = this.validate();
         return issues.length === 0;
-    };
+    }
 
-    repairUniqueIds (log) {
+    repairUniqueIds(log) {
         log = (log !== undefined ? log : Util.nullLogger);
 
-        var elementById = {},
-            filtered : ConlluElement[] = [];
+        const elementById = {};
+        const filtered: ConlluElement[] = [];
 
-        for (let i = 0; i < this.elements.length; i++) {
-            var element = this.elements[i];
+        for (const element of this.elements) {
             if (elementById[element.id] === undefined) {
                 elementById[element.id] = element;
                 filtered.push(element);
@@ -628,48 +623,47 @@ export class ConlluSentence {
         this.elements = filtered;
 
         return true;
-    };
+    }
 
-    repairWordSequence (log) {
+    repairWordSequence(log) {
         log('TODO: implement ConllU.ConlluSentence.repairWordSequence()');
         return true;
-    };
+    }
 
-    repairMultiwordSequence (log) {
+    repairMultiwordSequence(log) {
         log('TODO: implement ConllU.ConlluSentence.repairMultiwordSequence()');
         return true;
-    };
+    }
 
-    repairEmptyNodeSequence (log) {
+    repairEmptyNodeSequence(log) {
         log('TODO: implement ConllU.ConlluSentence.repairEmptyNodeSequence()');
         return true;
-    };
+    }
 
-    repairReferences (log) {
+    repairReferences(log) {
         log = (log !== undefined ? log : Util.nullLogger);
 
-        var elementById = this.elementById();
+        const elementById = this.elementById();
 
-        for (let i = 0; i < this.elements.length; i++) {
-            var element = this.elements[i];
+        for (const element of this.elements) {
 
             // repair HEAD if not valid
             if (!element.validHeadReference(elementById)) {
                 log('repair: blanking invalid HEAD');
-                element.head = "";
+                element.head = '';
             }
 
             // repair DEPS if not valid
             if (element.deps === '_') {
                 continue;
             }
-            var deparr = element.deps.split('|'),
-                filtered : string[] = [];
-            for (let j = 0; j < deparr.length; j++) {
-                var dep = deparr[j];
-                var m = dep.match(Util.dependencyRegex);
+            const deparr = element.deps.split('|');
+            const filtered: string[] = [];
+            for (const dep of deparr) {
+                const m = dep.match(Util.dependencyRegex);
                 if (m) {
-                    var head = m[1], deprel = m[2];
+                    const head = m[1];
+                    const deprel = m[2];
                     if (head === '0' || elementById[head] !== undefined) {
                         filtered.push(dep);
                     } else {
@@ -688,5 +682,80 @@ export class ConlluSentence {
             }
         }
         return true;
-    };
+    }
+
+  joinNextSentence(){
+    const sindex = this.document.sentences.indexOf(this);
+    if (!this.document.sentences[sindex + 1]) {
+    return;
+    }
+    const after = this.document.sentences[sindex + 1].elements;
+
+    after.forEach(e => e.sentence = this);
+
+    this.elements = this.elements.concat(after);
+    this.document.sentences.splice(sindex + 1, 1);
+    this.refix(true);
+
+    this.document.fixSentenceIds();
+}
+  newSentenceAt(cond){
+    const sindex = this.document.sentences.indexOf(this);
+    let eindex = -1;
+    let element: ConlluElement;
+    if (Number.isInteger(cond)){
+        eindex = cond;
+        element = this.elements[eindex];
+    }
+    else if (cond instanceof ConlluElement){
+        eindex = this.elements.findIndex(x => x === cond);
+        element = cond;
+    }
+    else {
+        throw new Error('first argument should be either index of element or the element object');
+    }
+
+    // fix if multiword
+    if (element.isMultiword){
+        // console.log(element, element.children.slice(-1)[0])
+        element = element.children.slice(-1)[0];
+        eindex = this.elements.findIndex(x => x === element);
+    }
+
+    // check if last segment
+    if (this.elements[eindex + 1]
+      && element.parent != null
+      && element.parent === this.elements[eindex + 1].parent){
+      // TODO show warning
+      throw new Error('Warning: chosen element is not the last segment of a word');
+    }
+
+    const before = this.elements.slice(0, eindex + 1);
+    const after = this.elements.slice(eindex + 1);
+    if (after.length === 0) {
+        // no sentence can be formed on no elements
+        throw new Error('No sentence can be formed on no elements');
+    }
+    else {
+      // sentence should be splitted
+      this.elements = before;
+
+      // re count the second sentence
+      let counter = 1;
+      after.forEach(e => {
+        if (!e.isMultiword) {
+          e.id = '' + counter++;
+        }
+        else {
+          const arr = e.id.split('-');
+          e.id = counter + '-' + (counter + parseInt(arr[1], 10) - parseInt(arr[0], 10));
+        }
+      });
+      const sent = new ConlluSentence('new', after, [], this.document);
+      this.document.sentences.splice(sindex + 1, 0, sent);
+      this.document.fixSentenceIds();
+      return sent;
+      // console.log(this.doc)
+    }
+  }
 }

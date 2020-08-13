@@ -57,6 +57,8 @@ class ConlluElement {
         }
         this._xpostag = this.sentence.document.mapTagToXpostag(argv);
         this.upostag = this.sentence.document.mapTagToUpostag(this._xpostag, this.upostag);
+        if (this.sentence.document.config.mapTagToXpostag === false)
+            return;
         // remove feats
         var tag = this.sentence.document.config.alltags.find(x => x.tag == this._xpostag);
         if (!tag)
@@ -280,10 +282,10 @@ class ConlluElement {
         if (!this.parent)
             return this.form;
         var prev = this.parent.children[this.isSeg - 1];
-        var prevStr = prev ? prev.form.replace(/[ًٌٍَُِّْ]*$/, "").substr(-1) : "";
+        var prevStr = prev ? prev.form.replace(/[ًٌٍَُِّْ۟]*$/, "").substr(-1) : "";
         var next = this.parent.children[this.isSeg + 1];
         var nextStr = next ? next.form.charAt(0) : "";
-        var meLast = this.form.replace(/[ًٌٍَُِّْ]*$/, "");
+        var meLast = this.form.replace(/[ًٌٍَُِّْ۟]*$/, "");
         meLast = meLast.charAt(meLast.length - 1);
         var meFirst = this.form.charAt(0);
         if (-this.parent.isSeg == this.isSeg + 1)

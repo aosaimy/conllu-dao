@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const element_1 = require("./element");
 const util_1 = require("./util");
 class ConlluSentence {
     constructor(sentenceId, elements = [], comments = [], document) {
@@ -597,6 +598,69 @@ class ConlluSentence {
         return true;
     }
     ;
+    joinNextSentence() {
+        var sindex = this.document.sentences.indexOf(this);
+        if (!this.document.sentences[sindex + 1])
+            return;
+        var after = this.document.sentences[sindex + 1].elements;
+        after.forEach(e => e.sentence = this);
+        this.elements = this.elements.concat(after);
+        this.document.sentences.splice(sindex + 1, 1);
+        this.refix(true);
+        this.document.fixSentenceIds();
+    }
+    newSentenceAt(cond) {
+        var sindex = this.document.sentences.indexOf(this);
+        if (Number.isInteger(cond)) {
+            var eindex = cond;
+            var element = this.elements[eindex];
+        }
+        else if (cond instanceof element_1.ConlluElement) {
+            var eindex = this.elements.findIndex(x => x == cond);
+            var element = cond;
+        }
+        else {
+            throw new Error("first argument should be either index of element or the element object");
+        }
+        // fix if multiword
+        if (element.isMultiword) {
+            // console.log(element, element.children.slice(-1)[0])
+            element = element.children.slice(-1)[0];
+            eindex = this.elements.findIndex(x => x == element);
+        }
+        // check if last segment
+        if (this.elements[eindex + 1]
+            && element.parent != null
+            && element.parent == this.elements[eindex + 1].parent) {
+            //TODO show warning
+            throw new Error("Warning: chosen element is not the last segment of a word");
+        }
+        var before = this.elements.slice(0, eindex + 1);
+        var after = this.elements.slice(eindex + 1);
+        if (after.length == 0) {
+            // no sentence can be formed on no elements
+            throw new Error("No sentence can be formed on no elements");
+        }
+        else {
+            // sentence should be splitted
+            this.elements = before;
+            //re count the second sentence
+            let counter = 1;
+            after.forEach(e => {
+                if (!e.isMultiword)
+                    e.id = "" + counter++;
+                else {
+                    var arr = e.id.split("-");
+                    e.id = counter + "-" + (counter + parseInt(arr[1]) - parseInt(arr[0]));
+                }
+            });
+            var sent = new ConlluSentence("new", after, [], this.document);
+            this.document.sentences.splice(sindex + 1, 0, sent);
+            this.document.fixSentenceIds();
+            return sent;
+            // console.log(this.doc)
+        }
+    }
 }
 exports.ConlluSentence = ConlluSentence;
 //# sourceMappingURL=sentence.js.map

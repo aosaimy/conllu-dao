@@ -1,6 +1,6 @@
-import {ConlluSentence}  from "./sentence"
-import {ConlluElement} from "./element"
-import {Util} from "./util"
+import { ConlluSentence } from './sentence';
+import { ConlluElement } from './element';
+import { Util } from './util';
 
 export class ConlluDocument {
 
@@ -8,114 +8,139 @@ export class ConlluDocument {
     /*
      * ConllU.ConlluDocument: represents CoNLL-U document
      */
-    sentences: ConlluSentence[] = []
-    config : { alltags : any, debug?: boolean} ={alltags:[]}
-    id : string =""
-    error: boolean = false;
-    strict: boolean = false;
-    private issues : string[] = []
-    logger: (str:string)=>void = (s:string)=>{}
+    sentences: ConlluSentence[] = [];
+    config: { alltags: any, debug?: boolean, mapTagToXpostag?: boolean, mapTagToUpostag?: boolean } = {
+        alltags: [],
+        mapTagToXpostag: false,
+        mapTagToUpostag: false,
+    };
+    id = '';
+    error = false;
+    strict = false;
+    private issues: string[] = [];
+    logger: (str: string) => void = (s: string) => { };
     // constructor(config, public events: Events=null) {
-    constructor(config,id="") {
-      if(!config)
-        console.error("No config JSON is supplied!")
-        this.config = config
+    constructor(config, id = '') {
+        if (!config) {
+            console.error('No config JSON is supplied!');
+        }
+        // this.config = config
         this.reset();
-        this.id = id
+        this.id = id;
     }
-    mapTagToXpostag(from){
-        var f = this.config.alltags.find(x=> x.tag == from || x.mapFrom.indexOf(from)>=0)
-        if(f)
-            return f.tag
-        Util.reportError("tag is not mapped to Xpostag: "+from)
-        return from
+    getInfo() {
+        const obj: any = {};
+        obj.sent_no = this.sentences.length;
+        obj.elem_no = this.sentences.map(s => s.elements.length).reduce((p, c) => p += c, 0);
+        obj.tokens_no = this.sentences.map(s => s.tokens().length).reduce((p, c) => p += c, 0);
+        obj.elem_no = this.sentences.map(s => s.elements.filter(el => el.isMultiword).length).reduce((p, c) => p += c, 0);
+        return obj;
     }
-
-    fixSentenceIds(){
-      this.sentences.forEach((s,i)=>{
-        // console.log(s)
-        let id_i = s.comments.findIndex(c=>{
-          return c.indexOf("# sent_id") == 0
-        })
-        if (id_i>=0)
-          s.comments[id_i] = "# sent_id = "+(i+1)
-        else
-          s.comments.push("# sent_id = "+(i+1))
-        s.id = 'S'+(i+1)
-
-        let text_i = s.comments.findIndex(c=>{
-          return c.indexOf("# text") == 0
-        })
-        if (text_i>=0)
-          s.comments[text_i] = "# text = "+s.getText()
-        else
-          s.comments.push("# text = "+s.getText())
-      })
+    mapTagToXpostag(from) {
+        if (this.config.mapTagToXpostag === false) {
+            return from;
+        }
+        const f = this.config.alltags.find(x => x.tag === from || x.mapFrom.indexOf(from) >= 0);
+        if (f) {
+            return f.tag;
+        }
+        Util.reportError('tag is not mapped to Xpostag: ' + from);
+        return from;
     }
 
+    fixSentenceIds() {
+        this.sentences.forEach((s, i) => {
+            // console.log(s)
+            const idIndex = s.comments.findIndex(c => c.indexOf('# sent_id') === 0);
+            if (idIndex >= 0) {
+                s.comments[idIndex] = '# sent_id = ' + (i + 1);
+            }
+            else {
+                s.comments.push('# sent_id = ' + (i + 1));
+            }
+            s.id = 'S' + (i + 1);
 
-    mapTagToUpostag(from,from_ud){
-        var f = this.config.alltags.find(x=>x.tag == from)
-        if(f)
-            return f.mapToConllU
-        Util.reportError("tag is not mapped to Upostag: "+from)
-        return from_ud
+            const textIndex = s.comments.findIndex(c => c.indexOf('# text') === 0);
+            if (textIndex >= 0) {
+                s.comments[textIndex] = '# text = ' + s.getText();
+            }
+            else {
+                s.comments.push('# text = ' + s.getText());
+            }
+        });
+    }
+
+
+    mapTagToUpostag(from, fromUd) {
+        if (this.config.mapTagToUpostag === false) {
+            return fromUd;
+        }
+        const f = this.config.alltags.find(x => x.tag === from);
+        if (f) {
+            return f.mapToConllU;
+        }
+        Util.reportError('tag is not mapped to Upostag: ' + from);
+        return fromUd;
     }
 
     reset() {
         this.sentences = [];
         this.error = false;
-        this.logger = function(s) { /* no-op */ };
+        this.logger = (s) => { /* no-op */ };
         this.strict = false; // pick heuristically
-    };
+    }
 
-    getElement(ref) : ConlluElement|null{
-      if(!ref)
-        return null
-      ref = ref.split(":")
-      let sent = this.sentences.find(x=>x.id==ref[0])
-      if(!sent)
-        return null
-       let elem = sent.elements.find(x=>x.id==ref[1])
-      if(!elem)
-        return null
-      // this.events.publish('highlight:change', elem)
-      if(elem.isMultiword)
-        elem=elem.children[0]
-      return elem
+    getElement(ref): ConlluElement | null {
+        if (!ref) {
+            return null;
+        }
+        ref = ref.split(':');
+        const sent = this.sentences.find(x => x.id === ref[0]);
+        if (!sent) {
+            return null;
+        }
+        let elem = sent.elements.find(x => x.id === ref[1]);
+        if (!elem) {
+            return null;
+        }
+        // this.events.publish('highlight:change', elem)
+        if (elem.isMultiword) {
+            elem = elem.children[0];
+        }
+        return elem;
     }
 
     getElementLine(element: ConlluElement, sentence: ConlluSentence) {
-        var counter = 1;
+        let counter = 1;
 
-        var result = 0
+        let result = 0;
         this.sentences.forEach(s => {
             s.elements.forEach(e => {
-                if (s.id == sentence.id && e.id == element.id) {
+                if (s.id === sentence.id && e.id === element.id) {
                     result = counter;
                 }
                 counter++;
-            })
+            });
             counter++;
-        })
-        return result
+        });
+        return result;
     }
     log(message) {
         this.logger(message);
-    };
+    }
 
     logError(message) {
         this.log('error: ' + message);
         this.error = true;
-    };
+    }
 
     toConllU() {
-        var lines : string[] = []
-        for (let sent of this.sentences) {
-            sent.toConllU(lines)
-            lines.push("")
+        const lines: string[] = [];
+        for (const sent of this.sentences) {
+            sent.toConllU(lines);
+            lines.push('');
         }
-        return lines.join("\n")
+        return lines.join('\n');
     }
     /* Parse CoNLL-U format, return ConlluDocument.
      * (see http://universaldependencies.github.io/docs/format.html)
@@ -145,41 +170,35 @@ export class ConlluDocument {
      * 9.  DEPS: List of secondary dependencies (head-deprel pairs).
      * 10. MISC: Any other annotation.
      */
-    parse(input, logger, strict) {
+    parse(input, logger = (s: string) => { }, strict = false) {
         // discard previous state, if any
         this.reset();
 
-        if (logger !== undefined) {
-            this.logger = logger;
-        }
-        if (strict !== undefined) {
-            this.strict = strict;
-        }
-
         // TODO: handle other newline formats
-        var lines = input.split('\n');
+        const lines = input.split('\n');
 
         if (!this.strict) {
             this.strict = Util.selectParsingMode(input, this.logger);
         }
 
         // select splitter to use for dividing the lines into fields.
-        var splitter = Util.selectFieldSplitter(input, this.logger, this.strict);
+        const splitter = Util.selectFieldSplitter(input, this.logger, this.strict);
 
-        var //elements = [],
+        let // elements = [],
             // comments = [],
             beforeConlluSentence = true;
 
-        var sId = 'S' + (this.sentences.length + 1);
-        var currentSentence = new ConlluSentence(sId,[],[],this)//, currentSentence.elements, currentSentence.comments);
+        const sId = 'S' + (this.sentences.length + 1);
+        let currentSentence = new ConlluSentence(sId, [], [], this); // , currentSentence.elements, currentSentence.comments);
 
+        const that = this;
         for (let idx = 0; idx < lines.length; idx++) {
-            var line = lines[idx], that = this;
-
-            var logLineError = function(message) {
+            const line = lines[idx];
+            const logLineError = (message) => {
                 that.logError('line ' + (idx + 1) + ': ' + message + ' ("' + line + '")');
                 that.error = true;
-            }
+            };
+
 
             if (Util.isComment(line)) {
                 if (beforeConlluSentence) {
@@ -194,19 +213,20 @@ export class ConlluDocument {
             // blank line
             beforeConlluSentence = false;
 
-            var fields = splitter(line);
+            const fields = splitter(line);
 
             if (fields.length === 0) {
                 // empty line, terminates sentence
                 if (currentSentence.elements.length !== 0 || currentSentence.comments.length !== 0) {
-                    currentSentence.refix()
-                    this.sentences.push(currentSentence)
-                    let sId = 'S' + (this.sentences.length + 1);
-                    currentSentence = new ConlluSentence(sId,[],[],this)//, currentSentence.elements, currentSentence.comments);
+                    currentSentence.refix();
+                    this.sentences.push(currentSentence);
+                    const sId2 = 'S' + (this.sentences.length + 1);
+                    currentSentence = new ConlluSentence(sId2, [], [], this); // , currentSentence.elements, currentSentence.comments);
                     // this.sentences.push(sentence);
                 } else {
-                  if(this.config.debug)
-                     logLineError('empty sentence, ignoring');
+                    if (this.config.debug) {
+                        logLineError('empty sentence, ignoring');
+                    }
                 }
                 // reset
                 // elements = [];
@@ -220,19 +240,20 @@ export class ConlluDocument {
                 Util.repairFields(fields, this.logger);
             }
 
-            var element = new ConlluElement(fields, ""+idx, line, currentSentence);
+            const element = new ConlluElement(fields, '' + idx, line, currentSentence);
 
-            let issues = element.validate();
-            issues.forEach(v=>logLineError(v))
+            const issues = element.validate();
+            issues.forEach(v => logLineError(v));
             if (issues.length !== 0) {
                 if (!element.repair(this.logger)) {
                     logLineError('repair failed, discarding line');
                     continue; // failed, ignore line
                 }
             }
-            let ar = element.id.split("-")
-            if(ar[0]!=ar[1])
-              currentSentence.elements.push(element);
+            const ar = element.id.split('-');
+            if (ar[0] !== ar[1]) {
+                currentSentence.elements.push(element);
+            }
         }
 
         // If elements is non-empty, last sentence ended without its
@@ -254,59 +275,66 @@ export class ConlluDocument {
 
         // If comments is non-empty, there were comments after the
         // terminating empty line. Warn and discard.
-        if (currentSentence.comments.length !== 0 && currentSentence.elements.length == 0) {
+        if (currentSentence.comments.length !== 0 && currentSentence.elements.length === 0) {
             this.logError('comments may not occur after last sentence, ' +
                 'ignoring');
         }
-        else{
-            currentSentence.refix()
-            this.sentences.push(currentSentence)
+        else {
+            currentSentence.refix();
+            this.sentences.push(currentSentence);
         }
 
-        for (let i = 0; i < this.sentences.length; i++) {
-            var sentence: ConlluSentence = this.sentences[i];
-
-            let issues = sentence.validate();
-            issues.forEach(v=>this.logError(v))
+        this.sentences.forEach(sentence => {
+            const issues = sentence.validate();
+            issues.forEach(v => this.logError(v));
             if (issues.length !== 0) {
                 if (!sentence.repair(this.logger)) {
                     this.logError('repair failed, discarding sentence');
-                    continue;
+                    return;
                 }
             }
-        }
+        });
         // console.log(this)
         return this;
     }
-    validate(){
-        this.sentences.forEach(s=>s.validate())
+    validate() {
+        const issues: string[] = [];
+        issues.concat(...this.sentences.map(s => s.validate()));
+        this.sentences.map(s => issues.concat(...s.elements.map(e => e.validate())));
+        console.log('my issues', issues);
+        return issues;
     }
-    find(creteria){
-                var regExps: {prop:string,regexp:RegExp}[] = ["form","lemma"]
-            .filter(prop=>creteria[prop]!=="" && creteria[prop].split("/").length == 3)
-            .map(prop=>{
-                let s = creteria[prop]
-                creteria[prop] = ""
-                return {"prop":prop,"regexp":new RegExp(s.split("/")[1])}
+    find(creteria) {
+        const regExps: { prop: string, regexp: RegExp }[] = ['form', 'lemma']
+            .filter(prop => creteria[prop] !== '' && creteria[prop].split('/').length === 3)
+            .map(prop => {
+                const s = creteria[prop];
+                creteria[prop] = '';
+                return { prop, regexp: new RegExp(s.split('/')[1]) };
             });
-        return [].concat.apply([],this.sentences.map(sent=>{
-        return sent.elements.filter(elem=>{
-          if(regExps.filter(r=>!r.regexp.test(elem[r.prop])).length>0)
-              return false
-          if(creteria.form !== "" && elem.form != creteria.form && elem.form.replace(/[ًٌٍَُِّْ]/g,"") != creteria.form ){
-              return false
-            }
-          if(creteria.xpos !== "" && elem.xpostag != creteria.xpos )
-            return false
-          if(creteria.upos !== "" && elem.upostag != creteria.upos )
-            return false
-          if(creteria.feats !== "" && elem.feats.indexOf(creteria.feats) <0)
-            return false
-          if(creteria.misc !== "" && elem.misc.indexOf(creteria.misc) < 0 )
-            return false
-          return true
-        })
-      }))
+        return ([] as ConlluElement[]).concat.apply([], this.sentences.map(sent => {
+            return sent.elements.filter(elem => {
+                if (regExps.filter(r => !r.regexp.test(elem[r.prop])).length > 0) {
+                    return false;
+                }
+                if (creteria.form !== '' && elem.form !== creteria.form && elem.form.replace(/[ًٌٍَُِّْ]/g, '') !== creteria.form) {
+                    return false;
+                }
+                if (creteria.xpos !== '' && elem.xpostag !== creteria.xpos) {
+                    return false;
+                }
+                if (creteria.upos !== '' && elem.upostag !== creteria.upos) {
+                    return false;
+                }
+                if (creteria.feats !== '' && elem.feats.indexOf(creteria.feats) < 0) {
+                    return false;
+                }
+                if (creteria.misc !== '' && elem.misc.indexOf(creteria.misc) < 0) {
+                    return false;
+                }
+                return true;
+            });
+        }));
     }
     toBrat(logger, includeEmpty) {
         if (logger !== undefined) {
@@ -317,9 +345,12 @@ export class ConlluDocument {
         }
 
         // merge brat data over all sentences
-        var mergedBratData = {},
-            textOffset = 0;
-        var categories = [
+        const mergedBratData = {
+            text: '',
+            error: false
+        };
+        let textOffset = 0;
+        const categories = [
             'entities',
             'attributes',
             'relations',
@@ -327,46 +358,44 @@ export class ConlluDocument {
             'styles',
             'sentlabels'
         ];
-        for (let i = 0; i < categories.length; i++) {
-            mergedBratData[categories[i]] = [];
-        }
-        mergedBratData['text'] = '';
-        for (let i = 0; i < this.sentences.length; i++) {
-            var sentence = this.sentences[i];
+        categories.forEach(x => {
+            mergedBratData[x] = [];
+        });
+        mergedBratData.text = '';
+        this.sentences.forEach(sentence => {
 
-            var issues = sentence.validate();
-            for (let j = 0; j < issues.length; j++) {
-                this.logError(issues[j]);
-            }
+            const issues = sentence.validate();
+
+            issues.forEach(x => this.logError(x));
+
             if (issues.length !== 0) {
                 if (!sentence.repair(this.logger)) {
                     this.logError('repair failed, discarding sentence');
-                    continue;
+                    return;
                 }
             }
             sentence.setBaseOffset(textOffset !== 0 ? textOffset + 1 : 0);
-            var bratData = sentence.toBrat(includeEmpty);
+            const bratData = sentence.toBrat(includeEmpty);
 
             // merge
-            if (mergedBratData['text'].length !== 0) {
-                mergedBratData['text'] += '\n';
+            if (mergedBratData.text.length !== 0) {
+                mergedBratData.text += '\n';
                 textOffset += 1;
             }
-            mergedBratData['text'] += bratData['text'];
-            textOffset += bratData['text'].length;
-            for (let j = 0; j < categories.length; j++) {
-                var c = categories[j];
+            mergedBratData.text += bratData.text;
+            textOffset += bratData.text.length;
+            categories.forEach(c => {
                 mergedBratData[c] = mergedBratData[c].concat(bratData[c]);
-            }
-        }
+            });
+        });
 
         // to avoid brat breakage on error, don't send empty text
-        if (mergedBratData['text'].length === 0) {
-            mergedBratData['text'] = '<EMPTY>';
+        if (mergedBratData.text.length === 0) {
+            mergedBratData.text = '<EMPTY>';
         }
 
-        mergedBratData['error'] = this.error;
+        mergedBratData.error = this.error;
 
         return mergedBratData;
-    };
+    }
 }

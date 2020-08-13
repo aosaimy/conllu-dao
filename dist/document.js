@@ -10,7 +10,11 @@ class ConlluDocument {
          * ConllU.ConlluDocument: represents CoNLL-U document
          */
         this.sentences = [];
-        this.config = { alltags: [] };
+        this.config = {
+            alltags: [],
+            mapTagToXpostag: false,
+            mapTagToUpostag: false,
+        };
         this.id = "";
         this.error = false;
         this.strict = false;
@@ -18,11 +22,21 @@ class ConlluDocument {
         this.logger = (s) => { };
         if (!config)
             console.error("No config JSON is supplied!");
-        this.config = config;
+        // this.config = config
         this.reset();
         this.id = id;
     }
+    getInfo() {
+        let obj = {};
+        obj.sent_no = this.sentences.length;
+        obj.elem_no = this.sentences.map(s => s.elements.length).reduce((p, c) => p += c, 0);
+        obj.tokens_no = this.sentences.map(s => s.tokens().length).reduce((p, c) => p += c, 0);
+        obj.elem_no = this.sentences.map(s => s.elements.filter(el => el.isMultiword).length).reduce((p, c) => p += c, 0);
+        return obj;
+    }
     mapTagToXpostag(from) {
+        if (this.config.mapTagToXpostag === false)
+            return from;
         var f = this.config.alltags.find(x => x.tag == from || x.mapFrom.indexOf(from) >= 0);
         if (f)
             return f.tag;
@@ -50,6 +64,8 @@ class ConlluDocument {
         });
     }
     mapTagToUpostag(from, from_ud) {
+        if (this.config.mapTagToUpostag === false)
+            return from_ud;
         var f = this.config.alltags.find(x => x.tag == from);
         if (f)
             return f.mapToConllU;
@@ -137,15 +153,9 @@ class ConlluDocument {
      * 9.  DEPS: List of secondary dependencies (head-deprel pairs).
      * 10. MISC: Any other annotation.
      */
-    parse(input, logger, strict) {
+    parse(input, logger = (s) => { }, strict = false) {
         // discard previous state, if any
         this.reset();
-        if (logger !== undefined) {
-            this.logger = logger;
-        }
-        if (strict !== undefined) {
-            this.strict = strict;
-        }
         // TODO: handle other newline formats
         var lines = input.split('\n');
         if (!this.strict) {
@@ -253,7 +263,11 @@ class ConlluDocument {
         return this;
     }
     validate() {
-        this.sentences.forEach(s => s.validate());
+        var issues = [];
+        issues.concat(...this.sentences.map(s => s.validate()));
+        this.sentences.map(s => issues.concat(...s.elements.map(e => e.validate())));
+        console.log("my issues", issues);
+        return issues;
     }
     find(creteria) {
         var regExps = ["form", "lemma"]

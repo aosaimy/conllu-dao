@@ -52,4 +52,6 @@ export declare class ConlluSentence {
     repairMultiwordSequence(log: any): boolean;
     repairEmptyNodeSequence(log: any): boolean;
     repairReferences(log: any): boolean;
+    joinNextSentence(): void;
+    newSentenceAt(cond: any): ConlluSentence;
 }

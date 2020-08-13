@@ -11,7 +11,7 @@ export declare class ConlluElement {
     head: string;
     deprel: string;
     deps: string;
-    _miscs: {};
+    _miscs: any;
     misc: string;
     lineidx: string;
     line: string;
